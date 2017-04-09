@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME Virginia DOT Reports
 // @namespace    https://greasyfork.org/users/45389
-// @version      0.2
+// @version      0.3
 // @description  Display VA transportation department reports in WME.
 // @author       MapOMatic
 // @include      https://editor-beta.waze.com/*editor/*
@@ -29,12 +29,12 @@
     var _window = unsafeWindow ? unsafeWindow : window;
 
     var _settingsStoreName = 'va_dot_report_settings';
-    var _alertUpdate = true;
+    var _alertUpdate = false;
     var _debugLevel = 0;
     var _scriptVersion = GM_info.script.version;
     var _scriptVersionChanges = [
         GM_info.script.name + '\nv' + _scriptVersion + '\n\nWhat\'s New\n------------------------------',
-        '\n- Archived reports are saved.'
+        '\n- All reports are displayed.'
     ].join('');
 
     var _imagesPath = 'https://github.com/mapomatic/wme-virginia-dot-reports/raw/master/images/';
@@ -45,7 +45,7 @@
     var _lastShownTooltipDiv;
     var _tableSortKeys = [];
     var _columnSortOrder = ['properties.location_description'];
-    var _reportTitles = {weather_closure: 'WEATHER CLOSURE', incident: 'INCIDENT', construction: 'CONSTRUCTION' };
+    var _reportTitles = {weather_closure: 'WEATHER CLOSURE', incident: 'INCIDENT', construction: 'CONSTRUCTION', high_impact_incident: 'HIGH PRIORTITY INCIDENT' };
 
     function log(message, level) {
         if (message && level <= _debugLevel) {
@@ -297,10 +297,18 @@
 
     function addReportToMap(report){
         var coord = report.geometry.coordinates;
-        var size = new OpenLayers.Size(60,60);
+        var imgName;
+        switch (report.type) {
+            case 'high_impact_incident':
+                imgName = 'incident_major';
+                break;
+            default:
+                imgName = report.type;
+        }
+        imgName += '.png';
+        var size = new OpenLayers.Size(29,29);
         var offset = new OpenLayers.Pixel(-(size.w/2), -size.h);
         var now = new Date(Date.now());
-        var imgName = report.type + '.png';
 
         report.imgUrl = _imagesPath + imgName;
         var icon = new OpenLayers.Icon(report.imgUrl,size,null);
@@ -410,19 +418,22 @@
             method: 'GET',
             context: context,
             url: 'http://files6.iteriscdn.com/WebApps/VA/SafeTravel/data/local/icons/metadata/icons.' + context.type + '.geojsonp',
-            onload: function(res) { res.context.results.callCount += 1; processReports($.parseJSON(/\((.*)\)/.exec(res.responseText)[1]).features, res.context); }
+            onload: function(res) { res.context.results.callCount += 1; processReports($.parseJSON(/\((.*)\)/.exec(res.responseText)[1]).features, res.context); },
+            onError: function(err) { log(err,0); }
         });
     }
 
     function fetchReports() {
-        var results = {callCount: 0, reports: [], expectedCallCount: 1};
+        var results = {callCount: 0, reports: [], expectedCallCount: 4};
         var weatherClosureContext = { type:'weather_closure', results:results };
-        //var incidentContext= { type:'incident', results:results };
-        //var constructionContext = { type:'construction', results:results };
+        var incidentContext= { type:'incident', results:results };
+        var constructionContext = { type:'construction', results:results };
+        var highImpactContext = { type: 'high_impact_incident', results: results};
 
         requestReports(weatherClosureContext);
-        //requestReports(incidentContext);
-        //requestReports(constructionContext);
+        requestReports(incidentContext);
+        requestReports(constructionContext);
+        requestReports(highImpactContext);
     }
 
     function onLayerVisibilityChanged(evt) {
@@ -477,7 +488,7 @@
             uniqueName: "__vaDotReports",
         });
 
-        I18n.translations.en.layers.name.__stateDotReports = "VA DOT Reports";
+        //I18n.translations[I18n.locale].layers.name.__stateDotReports = "VA DOT Reports";
         W.map.addLayer(_mapLayer);
         _mapLayer.setVisibility(_settings.layerVisible);
         _mapLayer.events.register('visibilitychanged',null,onLayerVisibilityChanged);

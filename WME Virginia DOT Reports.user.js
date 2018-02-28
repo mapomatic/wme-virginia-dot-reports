@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME Virginia DOT Reports
 // @namespace    https://greasyfork.org/users/45389
-// @version      2018.02.28.001
+// @version      2018.02.28.002
 // @description  Display VA transportation department reports in WME.
 // @author       MapOMatic
 // @include      /^https:\/\/(www|beta)\.waze\.com\/(?!user\/)(.{2,6}\/)?editor\/?.*$/
@@ -42,7 +42,7 @@
     var _reports = [];
     var _lastShownTooltipDiv;
     var _tableSortKeys = [];
-    var _columnSortOrder = ['properties.location_description'];
+    var _columnSortOrder = ['properties.icon','properties.location_description','archived'];
     var _reportTitles = {weather_closure: 'WEATHER CLOSURE', incident: 'INCIDENT', construction: 'CONSTRUCTION', high_impact_incident: 'HIGH PRIORTITY INCIDENT' };
 
     function log(message, level) {
@@ -241,34 +241,34 @@
 
 
     function onClickColumnHeader(obj) {
-        // var prop;
-        // switch (/va-dot-table-(.*)-header/.exec(obj.id)[1]) {
-        //     case 'category':
-        //         prop = 'icon.image';
-        //         break;
-        //     case 'begins':
-        //         prop = 'beginTime.time';
-        //         break;
-        //     case 'desc':
-        //         prop = 'eventDescription.descriptionHeader';
-        //         break;
-        //     case 'priority':
-        //         prop = 'priority';
-        //         break;
-        //     case 'archive':
-        //         prop = 'archived';
-        //         break;
-        //     default:
-        //         return;
-        // }
-        // var idx = _columnSortOrder.indexOf(prop);
-        // if (idx > -1) {
-        //     _columnSortOrder.splice(idx, 1);
-        //     _columnSortOrder.reverse();
-        //     _columnSortOrder.push(prop);
-        //     _columnSortOrder.reverse();
-        //     buildTable();
-        // }
+        var prop;
+        switch (/va-dot-table-(.*)-header/.exec(obj.id)[1]) {
+            case 'category':
+                prop = 'properties.icon';
+                break;
+            case 'begins':
+                prop = 'beginTime.time';
+                break;
+            case 'desc':
+                prop = 'properties.location_description';
+                break;
+            case 'priority':
+                prop = 'priority';
+                break;
+            case 'archive':
+                prop = 'archived';
+                break;
+            default:
+                return;
+        }
+        var idx = _columnSortOrder.indexOf(prop);
+        if (idx > -1) {
+            _columnSortOrder.splice(idx, 1);
+            _columnSortOrder.reverse();
+            _columnSortOrder.push(prop);
+            _columnSortOrder.reverse();
+            buildTable();
+        }
     }
 
     function buildTable() {
@@ -353,19 +353,6 @@
     }
 
     function processReportDetails(reportDetails, reports) {
-        //debugger;
-        //var headers = /<h4>(.*?)<[/]h4>/.exec(reportDetails);
-        // var re = /<div>(.*?)<[/]div>/gi;
-        // var details = [];
-        // var result;
-        // while (result = re.exec(reportDetails)) {
-        //     details.push(result[1]);
-        // }
-        //var detailsLookup = {};
-        //reportDetails.forEach(function(details) {
-        //    detailsLookup[details.id] = details;
-        //});
-
         _reports = [];
         _mapLayer.clearMarkers();
         log('Adding reports to map...', 1);
@@ -416,7 +403,7 @@
                     }
                 },
                 onerror: function(res) {
-                    debugger;
+                    console.log(res);
                 }
             });
         }

@@ -1,12 +1,10 @@
 // ==UserScript==
 // @name         WME Virginia DOT Reports
 // @namespace    https://greasyfork.org/users/45389
-// @version      0.3
+// @version      2018.02.28.001
 // @description  Display VA transportation department reports in WME.
 // @author       MapOMatic
-// @include      https://editor-beta.waze.com/*editor/*
-// @include      https://www.waze.com/*editor/*
-// @exclude      https://www.waze.com/*user/editor/*
+// @include      /^https:\/\/(www|beta)\.waze\.com\/(?!user\/)(.{2,6}\/)?editor\/?.*$/
 // @grant        GM_xmlhttpRequest
 // @connect      iteriscdn.com
 // @connect      511virginia.org
@@ -355,13 +353,14 @@
     }
 
     function processReportDetails(reportDetails, reports) {
+        //debugger;
         //var headers = /<h4>(.*?)<[/]h4>/.exec(reportDetails);
-        var re = /<div>(.*?)<[/]div>/gi;
-        var details = [];
-        var result;
-        while (result = re.exec(reportDetails)) {
-            details.push(result[1]);
-        }
+        // var re = /<div>(.*?)<[/]div>/gi;
+        // var details = [];
+        // var result;
+        // while (result = re.exec(reportDetails)) {
+        //     details.push(result[1]);
+        // }
         //var detailsLookup = {};
         //reportDetails.forEach(function(details) {
         //    detailsLookup[details.id] = details;
@@ -372,7 +371,7 @@
         log('Adding reports to map...', 1);
         reports.forEach(function(report, index) {
             if (report.geometry) {
-                report.details = details[index];
+                report.details = reportDetails[report.id];
                 report.archived = false;
                 if (_settings.archivedReports.hasOwnProperty(report.id)) {
                     // if ( _settings.archivedReports[report.id].updateNumber < report.situationUpdateKey.updateNumber) {
@@ -389,17 +388,38 @@
     }
 
     function requestReportDetails(reports) {
-        var ids = [];
-        reports.forEach(function(report) {
-            ids.push(report.id);
-        });
-        var url = 'http://www.511virginia.org/report.pl?idents=' + ids.join('%2C');
-        GM_xmlhttpRequest({
-            method: 'GET',
-            context: reports,
-            url: url,
-            onload: function(res) { processReportDetails(res.responseText, res.context); }
-        });
+        // Limit the # of details reports to 50 at a time, so we don't overflow the URL length limit.
+        var limit = 50;
+        var numberOfCalls = Math.floor((reports.length - 1) / limit) + 1;
+        var parentContext = {reports: reports, details: {}, numberOfCalls: numberOfCalls, callsReceived: 0};
+
+        for (var i=0; i<numberOfCalls; i++) {
+            var ids = reports.slice(i*limit,(i+1)*limit).map(report => report.id);
+            var url = 'http://www.511virginia.org/report.pl?idents=' + ids.join('%2C');
+            GM_xmlhttpRequest({
+                method: 'GET',
+                context: {parentContext: parentContext, ids: ids},
+                url: url,
+                onload: function(res) {
+                    var parentContext = res.context.parentContext;
+                    var text = res.responseText;
+                    var re = /<div>(.*?)<[/]div>/gi;
+                    var result;
+                    var idx = 0;
+                    while (result = re.exec(text)) {
+                        parentContext.details[res.context.ids[idx]] = result[1];
+                        idx++;
+                    }
+                    parentContext.callsReceived++;
+                    if (parentContext.callsReceived >= parentContext.numberOfCalls) {
+                        processReportDetails(parentContext.details, parentContext.reports);
+                    }
+                },
+                onerror: function(res) {
+                    debugger;
+                }
+            });
+        }
     }
 
     function processReports(reports, context) {
@@ -631,7 +651,7 @@
         loadSettingsFromStorage();
         initGui();
         _window.addEventListener('beforeunload', function saveOnClose() { saveSettingsToStorage(); }, false);
-        Waze.app.modeController.model.bind('change:mode', onModeChanged);
+        W.app.modeController.model.bind('change:mode', onModeChanged);
         log('Initialized.', 0);
     }
 

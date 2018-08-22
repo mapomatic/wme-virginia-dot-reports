@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME Virginia DOT Reports
 // @namespace    https://greasyfork.org/users/45389
-// @version      2018.02.28.002
+// @version      2018.08.22.001
 // @description  Display VA transportation department reports in WME.
 // @author       MapOMatic
 // @include      /^https:\/\/(www|beta)\.waze\.com\/(?!user\/)(.{2,6}\/)?editor\/?.*$/
@@ -646,7 +646,7 @@
         var wz = _window.W;
         if (wz && wz.loginManager &&
             wz.loginManager.events.register &&
-            wz.map && wz.loginManager.isLoggedIn()) {
+            wz.map && wz.loginManager.user) {
             log('Initializing...', 1);
             init();
         } else {

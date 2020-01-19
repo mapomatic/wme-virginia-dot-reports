@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME Virginia DOT Reports
 // @namespace    https://greasyfork.org/users/45389
-// @version      2018.08.22.001
+// @version      2020.01.19.001
 // @description  Display VA transportation department reports in WME.
 // @author       MapOMatic
 // @include      /^https:\/\/(www|beta)\.waze\.com\/(?!user\/)(.{2,6}\/)?editor\/?.*$/
@@ -156,7 +156,7 @@
             var id = $div.data('reportId');
             var report = getReport(id);
             $div.data('state', 'pinned');
-            W.map.moveTo(report.marker.lonlat);
+            W.map.setCenter(report.marker.lonlat);
             $div.popover('show');
             if (report.archived) {
                 $('.btn-archive-dot-report').text("Un-Archive");
@@ -229,7 +229,7 @@
             var marker = getReport(id).marker;
             var $imageDiv = report.imageDiv;
             //if (!marker.onScreen()) {
-            W.map.moveTo(marker.lonlat);
+            W.map.setCenter(marker.lonlat);
             //}
             toggleReportPopover($imageDiv);
 

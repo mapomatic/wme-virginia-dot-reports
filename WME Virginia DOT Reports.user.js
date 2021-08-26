@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         WME Virginia DOT Reports
 // @namespace    https://greasyfork.org/users/45389
-// @version      2020.01.19.001
+// @version      2021.08.26.001
 // @description  Display VA transportation department reports in WME.
 // @author       MapOMatic
 // @include      /^https:\/\/(www|beta)\.waze\.com\/(?!user\/)(.{2,6}\/)?editor\/?.*$/
@@ -424,8 +424,8 @@
         GM_xmlhttpRequest({
             method: 'GET',
             context: context,
-            url: 'http://files6.iteriscdn.com/WebApps/VA/SafeTravel/data/local/icons/metadata/icons.' + context.type + '.geojsonp',
-            onload: function(res) { res.context.results.callCount += 1; processReports($.parseJSON(/\((.*)\)/.exec(res.responseText)[1]).features, res.context); },
+            url: 'https://www.511virginia.org/data/geojson/icons.' + context.type + '.geojson',
+            onload: function(res) { res.context.results.callCount += 1; processReports(JSON.parse(res.responseText).features, res.context); },
             onError: function(err) { log(err,0); }
         });
     }
@@ -638,7 +638,7 @@
         loadSettingsFromStorage();
         initGui();
         _window.addEventListener('beforeunload', function saveOnClose() { saveSettingsToStorage(); }, false);
-        W.app.modeController.model.bind('change:mode', onModeChanged);
+        //W.app.modeController.model.bind('change:mode', onModeChanged);
         log('Initialized.', 0);
     }
 
